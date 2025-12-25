@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlatShift Tenant Chatbot</title>
+
+<style>
+/* =========================
+   GLOBAL
+========================= */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #f4f6f9;
+    overflow-x: hidden;
+}
+
+/* =========================
+   CHAT CARD (FIXED BOX)
+========================= */
+.chat-container {
+    width: 90%;
+    max-width: 1100px;
+    height: 620px;                 /* ✅ FIXED CARD HEIGHT */
+    margin: 40px auto;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* =========================
+   HEADER
+========================= */
+.chat-header {
+    padding: 20px;
+    font-size: 26px;
+    font-weight: 700;
+    text-align: center;
+    color: #1f3b57;
+    border-bottom: 1px solid #ddd;
+}
+
+/* =========================
+   CHAT BODY (SCROLLABLE)
+========================= */
+.chat-box {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+/* =========================
+   USER MESSAGE
+========================= */
+.message.user {
+    max-width: 70%;
+    padding: 16px 22px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+    background: #1f3b57;
+    color: #ffffff;
+    margin-left: auto;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+/* =========================
+   BOT MESSAGE
+========================= */
+.bot-wrapper {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+}
+
+.bot-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #1f7aff;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.message.bot {
+    max-width: 70%;
+    padding: 16px 22px;
+    border-radius: 14px;
+    background: #eef3f9;
+    color: #000000;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+/* =========================
+   INPUT AREA (FIXED BOTTOM)
+========================= */
+.chat-input {
+    padding: 14px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #ffffff;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 14px 18px;
+    font-size: 18px;
+    height: 52px;
+    border-radius: 10px;
+    border: 1px solid #bbb;
+    outline: none;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.icon-btn {
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 22px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.send-btn { background: #1f7aff; }
+.clear-btn { background: #ff4d4d; }
+</style>
+</head>
+
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">PlatShift Tenant Chatbot</div>
+    <div class="chat-box" id="chatBox"></div>
+
+    <div class="chat-input">
+        <input type="text" id="userInput" placeholder="Ask something..." />
+        <button class="icon-btn send-btn" onclick="sendMessage()">➤</button>
+        <button class="icon-btn clear-btn" onclick="clearChat()">✖</button>
+    </div>
+</div>
+
+<script>
+/* DATA */
+const DASHBOARD_DATA = {
+  total_environments: 5,
+    total_users: 5,
+    total_licenses: 5,
+    total_service_plans: 5,
+    total_groups: 4,
+    total_roles: 5,
+    total_onedriveaccounts: 5,
+    total_teams: 5,
+    total_rules: 4,
+    total_entities: 5,
+    total_solutions: 5,
+    total_members: 7,
+    total_job_roles: 4,
+    total_teams_members: 5,
+    total_teams_channels: 6,
+    total_group_types: 3,
+    total_apps: 4,
+    total_connection_references: 5,
+    total_power_pages: 5,
+    total_domains: 2,
+    total_hosts: 3,
+    total_sharepoint_sites: 5,
+    total_plugins : 4,
+    total_workloads: 6,
+    total_dlp_policy_types: 2,
+    total_dlp_policies: 5,
+    total_distribution_status: 2
+   
+};
+
+const METRICS = [
+    { 
+        label: "environments", 
+        dataKey: "total_environments", 
+        keywords: ["environment", "environments", "env"] 
+    },
+    { 
+        label: "users", 
+        dataKey: "total_users", 
+        keywords: ["user", "users"] 
+    },
+    { 
+        label: "licenses", 
+        dataKey: "total_licenses", 
+        keywords: ["license", "licenses"] 
+    },
+    { 
+        label: "service plans", 
+        dataKey: "total_service_plans", 
+        keywords: ["service plan", "plans"] 
+    },
+    { 
+        label: "groups", 
+        dataKey: "total_groups", 
+        keywords: ["group", "groups"] 
+    },
+    { 
+        label: "roles", 
+        dataKey: "total_roles", 
+        keywords: ["role", "roles"] 
+    },
+    { 
+        label: "onedrive accounts", 
+        dataKey: "total_onedriveaccounts", 
+        keywords: ["onedrive account", "onedrive accounts"] 
+    },
+    { 
+        label: "teams", 
+        dataKey: "total_teams", 
+        keywords: ["team", "teams"] 
+    },
+    { 
+        label: "rules", 
+        dataKey: "total_rules", 
+        keywords: ["rule", "rules"] 
+    },
+    { 
+        label: "entities", 
+        dataKey: "total_entities", 
+        keywords: ["entity", "entities"] 
+    },
+    { 
+        label: "solutions", 
+        dataKey: "total_solutions", 
+        keywords: ["solution", "solutions"] 
+    },
+    { 
+        label: "members", 
+        dataKey: "total_members", 
+        keywords: ["member", "members"] 
+    },
+    { 
+        label: "job roles", 
+        dataKey: "total_job_roles", 
+        keywords: ["job role", "job roles"] 
+    },
+    { 
+        label: "teams members", 
+        dataKey: "total_teams_members", 
+        keywords: ["team members", "teams members"] 
+    },
+    { 
+        label: "teams channels", 
+        dataKey: "total_teams_channels", 
+        keywords: ["channels", "team channels"] 
+    },
+    { 
+        label: "group types", 
+        dataKey: "total_group_types", 
+        keywords: ["group type", "group types"] 
+    },
+    { 
+        label: "apps", 
+        dataKey: "total_apps",
+        keywords: ["app", "apps", "applications"] 
+    },
+    { 
+        label: "connection references", 
+        dataKey: "total_connection_references", 
+        keywords: ["connection reference", "connections"] 
+    },
+    { 
+        label: "power pages", 
+        dataKey: "total_power_pages", 
+        keywords: ["power page", "power pages"] 
+    },
+    { 
+        label: "domains", 
+        dataKey: "total_domains", 
+        keywords: ["domain", "domains"] 
+    },
+    {
+    label: "hosts",
+    dataKey: "total_hosts",
+    keywords: [
+      "host", "hosts",
+      "total host", "total hosts",
+      "number of hosts"
+    ]
+  },
+
+  
+  {
+    label: "sharepoint sites",
+    dataKey: "total_sharepoint_sites",
+    keywords: [
+      "sharepoint",
+      "sharepoint site",
+      "sharepoint sites",
+      "sp site",
+      "sp sites",
+      "total sharepoint sites",
+      "number of sharepoint sites"
+    ]
+  },
+
+    {
+    label: "Plugins",
+    dataKey: "total_plugins",
+    keywords: [
+      "plugins",
+      "total plugins",
+      "plugin"
+    ]
+  },
+  {
+    label: "workloads",
+    dataKey: "total_workloads",
+    keywords: ["workload", "workloads", "no of workloads"]
+  },
+  {
+    label: "dlp policy types",
+    dataKey: "total_dlp_policy_types",
+    keywords: ["dlp policy type", "dlp policy types", "policy type", "policy types"]
+  },
+  {
+    label: "dlp policies",
+    dataKey: "total_dlp_policies",
+    keywords: ["dlp policy", "dlp policies", "policy", "policies","dlp"]
+  },
+  {
+    label: "distribution status",
+    dataKey: "total_distribution_status",
+    keywords: ["distribution status", "distribution", "status"]
+  }
+  
+];
+
+function normalize(t){
+    return t.toLowerCase().replace(/[^a-z0-9 ]/g,"");
+}
+
+function findMetric(text){
+    for(let m of METRICS){
+        for(let w of m.keywords){
+            if(text.includes(w)) return m;
+        }
+    }
+    return null;
+}
+
+function getBotReply(input){
+    const metric = findMetric(normalize(input));
+    if(!metric) return "Please ask about correct metrics";
+    return `There are <b>${DASHBOARD_DATA[metric.dataKey]}</b> ${metric.label}.`;
+}
+
+/* UI FUNCTIONS */
+const chatBox = document.getElementById("chatBox");
+const userInput = document.getElementById("userInput");
+
+function addUser(text){
+    const div = document.createElement("div");
+    div.className = "message user";
+    div.innerText = text;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function addBotThinking(){
+    const wrap = document.createElement("div");
+    wrap.className = "bot-wrapper";
+
+    const avatar = document.createElement("div");
+    avatar.className = "bot-avatar";
+    avatar.innerText = "🤖";
+
+    const msg = document.createElement("div");
+    msg.className = "message bot thinking";
+    msg.innerHTML = "Thinking<span class='dots'></span>";
+
+    wrap.appendChild(avatar);
+    wrap.appendChild(msg);
+    chatBox.appendChild(wrap);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    return msg;
+}
+
+function sendMessage(){
+    const text = userInput.value.trim();
+    if(!text) return;
+
+    addUser(text);
+    userInput.value = "";
+
+    const thinkingMsg = addBotThinking();
+
+    setTimeout(() => {
+        thinkingMsg.classList.remove("thinking");
+        thinkingMsg.innerHTML = getBotReply(text);
+    }, 600); 
+}
+function clearChat(){
+    chatBox.innerHTML = "";
+}
+
+userInput.addEventListener("keypress", e=>{
+    if(e.key === "Enter") sendMessage();
+});
+</script>
+</body>
+</html>
